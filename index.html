@@ -183,6 +183,7 @@
   .segmented button.active{ background:var(--accent-solid); color:#fff; }
   .segmented.small{ margin-top:8px; }
   .segmented.small button{ font-size:.64rem; padding:5px 4px; }
+  .segmented.wrap button{ flex:1 1 auto; min-width:96px; }
 
   .add-btn{
     width:100%; margin:12px 0 0;
@@ -550,6 +551,7 @@
     .sidebar-fixed{ padding:12px 16px; }
     .segmented button{ font-size:.74rem; padding:9px 4px; }
     .segmented.small button{ font-size:.7rem; padding:7px 4px; }
+    .segmented.wrap button{ min-width:108px; }
     .add-btn{ padding:12px 14px; font-size:.8rem; }
     .search-input{ font-size:1rem; padding:9px 11px; }
 
@@ -624,6 +626,14 @@
         <button data-type="all" class="active">Alle</button>
         <button data-type="movie">Filme</button>
         <button data-type="series">Serien</button>
+      </div>
+      <div class="segmented small wrap" id="statusFilterTabs">
+        <button data-status="all" class="active">Alle</button>
+        <button data-status="watching">Laufend</button>
+        <button data-status="want">Will ich sehen</button>
+        <button data-status="seen">Gesehen</button>
+        <button data-status="completed">Abgeschlossen</button>
+        <button data-status="dropped">Abgebrochen</button>
       </div>
       <button class="add-btn" id="openAdd">+ Neu</button>
       <input type="search" class="search-input" id="searchInput" placeholder="Titel suchen …">
@@ -905,6 +915,7 @@
   var state = load();
   if(!state.view) state.view = "library";
   if(!state.typeFilter) state.typeFilter = "all";
+  if(!state.statusFilter) state.statusFilter = "all";
   if(!state.selected && state.items.length){ state.selected = state.items[0].id; }
   var searchQuery = "";
 
@@ -1047,7 +1058,8 @@
       btn.classList.toggle('active', btn.getAttribute('data-view')===state.view);
     });
     document.getElementById('libraryListWrap').hidden = state.view === 'stats';
-    document.getElementById('typeFilter').closest('.sidebar-fixed').querySelector('#typeFilter').hidden = state.view === 'stats';
+    document.getElementById('typeFilter').hidden = state.view === 'stats';
+    document.getElementById('statusFilterTabs').hidden = state.view === 'stats';
   }
 
   /* ---------- Library / sidebar list ---------- */
@@ -1062,6 +1074,10 @@
     var q = searchQuery.trim().toLowerCase();
     var filtered = state.items;
     if(state.typeFilter !== 'all'){ filtered = filtered.filter(function(i){ return i.type===state.typeFilter; }); }
+    if(state.statusFilter !== 'all'){
+      var activeGroup = GROUP_DEFS.filter(function(g){ return g.key===state.statusFilter; })[0];
+      if(activeGroup) filtered = filtered.filter(activeGroup.match);
+    }
     if(q){ filtered = filtered.filter(function(i){ return i.title.toLowerCase().indexOf(q) !== -1; }); }
     filtered = sortByTitle(filtered);
 
@@ -1070,33 +1086,39 @@
       return;
     }
 
-    var byGroup = {};
-    GROUP_DEFS.forEach(function(g){ byGroup[g.key] = []; });
-    filtered.forEach(function(it){
-      var g = GROUP_DEFS.filter(function(g){ return g.match(it); })[0];
-      if(g) byGroup[g.key].push(it);
-    });
+    function renderCard(it){
+      var active = (state.view==='library' && it.id===state.selected);
+      var metaBits = [];
+      if(it.year) metaBits.push(it.year);
+      if(it.type==='series'){ metaBits.push((it.watchedEpisodes||0)+'/'+(it.totalEpisodes||0)+' Ep.'); }
+      else if(it.runtime){ metaBits.push(it.runtime+' Min.'); }
+      if(it.rating) metaBits.push(it.rating+'/10');
+      return '<button class="item-card'+(active?' active':'')+'" data-id="'+it.id+'">'+
+        '<div class="row1"><span class="dot" style="background:'+statusColor(it.status)+'"></span>'+
+        '<span class="type-flag">'+(it.type==='series'?'SERIE':'FILM')+'</span>'+
+        '<span class="title">'+esc(it.title)+'</span></div>'+
+        '<div class="meta">'+esc(metaBits.join(' · ')||'—')+'</div>'+
+      '</button>';
+    }
 
     var html = "";
-    GROUP_DEFS.forEach(function(g){
-      var list = byGroup[g.key];
-      if(!list.length) return;
-      html += '<div class="group-label">'+g.label+' ('+list.length+')</div>';
-      list.forEach(function(it){
-        var active = (state.view==='library' && it.id===state.selected);
-        var metaBits = [];
-        if(it.year) metaBits.push(it.year);
-        if(it.type==='series'){ metaBits.push((it.watchedEpisodes||0)+'/'+(it.totalEpisodes||0)+' Ep.'); }
-        else if(it.runtime){ metaBits.push(it.runtime+' Min.'); }
-        if(it.rating) metaBits.push(it.rating+'/10');
-        html += '<button class="item-card'+(active?' active':'')+'" data-id="'+it.id+'">'+
-          '<div class="row1"><span class="dot" style="background:'+statusColor(it.status)+'"></span>'+
-          '<span class="type-flag">'+(it.type==='series'?'SERIE':'FILM')+'</span>'+
-          '<span class="title">'+esc(it.title)+'</span></div>'+
-          '<div class="meta">'+esc(metaBits.join(' · ')||'—')+'</div>'+
-        '</button>';
+    if(state.statusFilter === 'all'){
+      var byGroup = {};
+      GROUP_DEFS.forEach(function(g){ byGroup[g.key] = []; });
+      filtered.forEach(function(it){
+        var g = GROUP_DEFS.filter(function(g){ return g.match(it); })[0];
+        if(g) byGroup[g.key].push(it);
       });
-    });
+      GROUP_DEFS.forEach(function(g){
+        var list = byGroup[g.key];
+        if(!list.length) return;
+        html += '<div class="group-label">'+g.label+' ('+list.length+')</div>';
+        list.forEach(function(it){ html += renderCard(it); });
+      });
+    } else {
+      html += '<div class="group-label">'+filtered.length+' Eintrag'+(filtered.length===1?'':'e')+'</div>';
+      filtered.forEach(function(it){ html += renderCard(it); });
+    }
     el.innerHTML = html;
     Array.prototype.forEach.call(el.querySelectorAll('.item-card'), function(btn){
       btn.addEventListener('click', function(){
@@ -1376,6 +1398,15 @@
     btn.addEventListener('click', function(){
       state.typeFilter = btn.getAttribute('data-type');
       Array.prototype.forEach.call(document.querySelectorAll('#typeFilter button'), function(b){
+        b.classList.toggle('active', b===btn);
+      });
+      save(); renderLibrary();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#statusFilterTabs button'), function(btn){
+    btn.addEventListener('click', function(){
+      state.statusFilter = btn.getAttribute('data-status');
+      Array.prototype.forEach.call(document.querySelectorAll('#statusFilterTabs button'), function(b){
         b.classList.toggle('active', b===btn);
       });
       save(); renderLibrary();

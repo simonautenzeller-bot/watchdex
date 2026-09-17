@@ -632,7 +632,6 @@
         <button data-view="stats">Statistik</button>
       </div>
       <div class="segmented small" id="typeFilter">
-        <button data-type="all" class="active">Alle</button>
         <button data-type="movie">Filme</button>
         <button data-type="series">Serien</button>
       </div>
@@ -873,7 +872,7 @@
 
   function seedData(){
     return {
-      seeded:true, view:"library", typeFilter:"all", selected:null,
+      seeded:true, view:"library", typeFilter:"movie", statusFilter:"all", selected:null,
       items:[
         {
           id:uid(), type:"movie", title:"Dune", year:2021, genre:"Sci-Fi, Abenteuer", director:"Denis Villeneuve",
@@ -916,7 +915,7 @@
 
   var state = load();
   if(!state.view) state.view = "library";
-  if(!state.typeFilter) state.typeFilter = "all";
+  if(!state.typeFilter || state.typeFilter === "all") state.typeFilter = "movie";
   if(!state.statusFilter) state.statusFilter = "all";
   if(!state.selected && state.items.length){ state.selected = state.items[0].id; }
   var searchQuery = "";
@@ -1396,20 +1395,36 @@
       save(); renderAll();
     });
   });
+  var VALID_STATUS_BY_TYPE = {
+    movie: MOVIE_STATUS.map(function(o){ return o[0]; }),
+    series: SERIES_STATUS.map(function(o){ return o[0]; })
+  };
+
+  function renderTypeFilter(){
+    Array.prototype.forEach.call(document.querySelectorAll('#typeFilter button'), function(b){
+      b.classList.toggle('active', b.getAttribute('data-type')===state.typeFilter);
+    });
+  }
   Array.prototype.forEach.call(document.querySelectorAll('#typeFilter button'), function(btn){
     btn.addEventListener('click', function(){
       state.typeFilter = btn.getAttribute('data-type');
-      Array.prototype.forEach.call(document.querySelectorAll('#typeFilter button'), function(b){
-        b.classList.toggle('active', b===btn);
-      });
+      renderTypeFilter();
+      var valid = VALID_STATUS_BY_TYPE[state.typeFilter] || [];
+      if(state.statusFilter !== 'all' && valid.indexOf(state.statusFilter) === -1) state.statusFilter = 'all';
+      renderStatusTabs();
       save(); renderLibrary();
     });
   });
+  renderTypeFilter();
+
   function renderStatusTabs(){
     var el = document.getElementById('statusFilterTabs');
-    var defs = [{key:'all', label:'Alle', color:null}].concat(GROUP_DEFS.map(function(g){
-      return {key:g.key, label:g.label, color:statusColor(g.key)};
-    }));
+    var valid = VALID_STATUS_BY_TYPE[state.typeFilter] || [];
+    var defs = [{key:'all', label:'Alle', color:null}].concat(
+      GROUP_DEFS.filter(function(g){ return valid.indexOf(g.key) !== -1; }).map(function(g){
+        return {key:g.key, label:g.label, color:statusColor(g.key)};
+      })
+    );
     el.innerHTML = defs.map(function(d){
       var style = d.color ? ' style="--tab-color:'+d.color+'"' : '';
       var active = state.statusFilter===d.key ? ' active' : '';

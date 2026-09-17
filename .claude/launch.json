@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "watchdex",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "npx", "--yes", "serve", "-l", "5173", "."],
+      "port": 5173
+    }
+  ]
+}

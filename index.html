@@ -637,7 +637,7 @@
       </div>
       <div class="status-tabs" id="statusFilterTabs"></div>
       <button class="add-btn" id="openAdd">+ Neu</button>
-      <input type="search" class="search-input" id="searchInput" placeholder="Titel suchen …">
+      <input type="search" class="search-input" id="searchInput" placeholder="Titel, Regisseur, Darsteller …">
     </div>
     <div class="sidebar-scroll" id="libraryListWrap">
       <div id="libraryList"></div>
@@ -924,7 +924,6 @@
     for(var i=0;i<state.items.length;i++){ if(state.items[i].id===id) return state.items[i]; }
     return null;
   }
-  function typeLabel(t){ return t==='series' ? 'Serie' : 'Film'; }
 
   /* ---------- TMDB ---------- */
   function getTmdbKey(){ try{ return localStorage.getItem(TMDB_KEY_STORAGE) || ""; }catch(e){ return ""; } }
@@ -1079,7 +1078,13 @@
       var activeGroup = GROUP_DEFS.filter(function(g){ return g.key===state.statusFilter; })[0];
       if(activeGroup) filtered = filtered.filter(activeGroup.match);
     }
-    if(q){ filtered = filtered.filter(function(i){ return i.title.toLowerCase().indexOf(q) !== -1; }); }
+    if(q){
+      filtered = filtered.filter(function(i){
+        return i.title.toLowerCase().indexOf(q) !== -1 ||
+          (i.director||'').toLowerCase().indexOf(q) !== -1 ||
+          (i.cast||'').toLowerCase().indexOf(q) !== -1;
+      });
+    }
     filtered = sortByTitle(filtered);
 
     if(!filtered.length){
@@ -1188,7 +1193,10 @@
           '<div style="min-width:0;flex:1">'+
             '<input class="title-input" id="titleInput" type="text" value="'+esc(it.title)+'" aria-label="Titel">'+
             '<div class="tags">'+
-              '<span class="pill">'+typeLabel(it.type)+'</span>'+
+              '<select class="status-select" id="typeSelect">'+
+                '<option value="movie"'+(it.type==='movie'?' selected':'')+'>Film</option>'+
+                '<option value="series"'+(it.type==='series'?' selected':'')+'>Serie</option>'+
+              '</select>'+
               '<select class="status-select" id="statusSelect">'+statusOptionsHtml(it.type, it.status)+'</select>'+
             '</div>'+
           '</div>'+
@@ -1219,6 +1227,22 @@
     it.totalEpisodes = total;
   }
 
+  function convertItemType(it, newType){
+    if(it.type === newType) return;
+    var statusMap = newType === 'series'
+      ? { want:'want', seen:'completed', dropped:'dropped' }
+      : { want:'want', watching:'want', completed:'seen', dropped:'dropped' };
+    it.status = statusMap[it.status] || 'want';
+    it.type = newType;
+    if(newType === 'series'){
+      if(!it.seasons || !it.seasons.length) it.seasons = [{season:1, watched:0, total:0}];
+      if(!it.episodeRuntime) it.episodeRuntime = it.runtime || 45;
+      recalcSeriesTotals(it);
+    } else if(!it.runtime){
+      it.runtime = it.episodeRuntime || 0;
+    }
+  }
+
   function wireItemPanelEvents(it){
     var main = document.getElementById('main');
 
@@ -1232,6 +1256,10 @@
 
     document.getElementById('statusSelect').addEventListener('change', function(e){
       it.status = e.target.value; save(); renderAll();
+    });
+    document.getElementById('typeSelect').addEventListener('change', function(e){
+      convertItemType(it, e.target.value);
+      save(); renderAll();
     });
     var titleInput = document.getElementById('titleInput');
     titleInput.addEventListener('change', function(e){
@@ -1373,12 +1401,31 @@
       ? rated.map(function(i){ return barRow(esc(i.title), i.rating, 10, 'var(--accent)', i.rating+'/10'); }).join('')
       : '<div class="empty-state">Noch keine Bewertungen erfasst.</div>';
 
+    function tallyField(fieldName, emptyLabel){
+      var counts = {};
+      items.filter(function(i){ return i.status==='seen' || i.status==='completed' || i.status==='watching'; }).forEach(function(i){
+        (i[fieldName]||'').split(',').map(function(v){ return v.trim(); }).filter(Boolean).forEach(function(v){
+          counts[v] = (counts[v]||0)+1;
+        });
+      });
+      var entries = Object.keys(counts).map(function(k){ return [k, counts[k]]; })
+        .sort(function(a,b){ return b[1]-a[1]; }).slice(0,8);
+      var max = entries.length ? entries[0][1] : 1;
+      return entries.length
+        ? entries.map(function(e){ return barRow(esc(e[0]), e[1], max, 'var(--accent)', e[1]); }).join('')
+        : '<div class="empty-state">'+emptyLabel+'</div>';
+    }
+    var directorHtml = tallyField('director', 'Noch keine Regie-Daten.');
+    var castHtml = tallyField('cast', 'Noch keine Cast-Daten.');
+
     main.innerHTML =
       '<div class="stats-head"><h2>Statistik</h2><p>Auswertung über alle erfassten Filme & Serien.</p></div>'+
       timeBanner+
       '<div class="kpi-grid">'+kpiHtml+'</div>'+
       section('Status', '<div class="barlist">'+statusHtml+'</div>')+
       section('Top-Genres', '<div class="barlist">'+genreHtml+'</div>')+
+      section('Top-Regisseure', '<div class="barlist">'+directorHtml+'</div>')+
+      section('Top-Darsteller', '<div class="barlist">'+castHtml+'</div>')+
       section('Am besten bewertet', '<div class="barlist">'+topHtml+'</div>');
   }
 

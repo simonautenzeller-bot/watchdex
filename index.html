@@ -185,6 +185,15 @@
   .segmented.small button{ font-size:.64rem; padding:5px 4px; }
   .segmented.wrap button{ flex:1 1 auto; min-width:96px; }
 
+  .status-tabs{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .status-tab{
+    font-family:var(--font-mono); font-size:.64rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+    padding:5px 11px; border-radius:100px; cursor:pointer; background:transparent;
+    border:1.5px solid var(--tab-color, var(--border)); color:var(--tab-color, var(--ink-faint));
+  }
+  .status-tab:hover{ background:color-mix(in srgb, var(--tab-color, var(--border)) 14%, transparent); }
+  .status-tab.active{ background:var(--tab-color, var(--accent-solid)); color:var(--bg); border-color:var(--tab-color, var(--accent-solid)); }
+
   .add-btn{
     width:100%; margin:12px 0 0;
     display:flex; align-items:center; justify-content:center; gap:6px;
@@ -627,14 +636,7 @@
         <button data-type="movie">Filme</button>
         <button data-type="series">Serien</button>
       </div>
-      <div class="segmented small wrap" id="statusFilterTabs">
-        <button data-status="all" class="active">Alle</button>
-        <button data-status="watching">Laufend</button>
-        <button data-status="want">Will ich sehen</button>
-        <button data-status="seen">Gesehen</button>
-        <button data-status="completed">Abgeschlossen</button>
-        <button data-status="dropped">Abgebrochen</button>
-      </div>
+      <div class="status-tabs" id="statusFilterTabs"></div>
       <button class="add-btn" id="openAdd">+ Neu</button>
       <input type="search" class="search-input" id="searchInput" placeholder="Titel suchen …">
     </div>
@@ -1403,15 +1405,25 @@
       save(); renderLibrary();
     });
   });
-  Array.prototype.forEach.call(document.querySelectorAll('#statusFilterTabs button'), function(btn){
-    btn.addEventListener('click', function(){
-      state.statusFilter = btn.getAttribute('data-status');
-      Array.prototype.forEach.call(document.querySelectorAll('#statusFilterTabs button'), function(b){
-        b.classList.toggle('active', b===btn);
+  function renderStatusTabs(){
+    var el = document.getElementById('statusFilterTabs');
+    var defs = [{key:'all', label:'Alle', color:null}].concat(GROUP_DEFS.map(function(g){
+      return {key:g.key, label:g.label, color:statusColor(g.key)};
+    }));
+    el.innerHTML = defs.map(function(d){
+      var style = d.color ? ' style="--tab-color:'+d.color+'"' : '';
+      var active = state.statusFilter===d.key ? ' active' : '';
+      return '<button class="status-tab'+active+'" data-status="'+d.key+'"'+style+'>'+esc(d.label)+'</button>';
+    }).join('');
+    Array.prototype.forEach.call(el.querySelectorAll('.status-tab'), function(btn){
+      btn.addEventListener('click', function(){
+        state.statusFilter = btn.getAttribute('data-status');
+        Array.prototype.forEach.call(el.querySelectorAll('.status-tab'), function(b){ b.classList.toggle('active', b===btn); });
+        save(); renderLibrary();
       });
-      save(); renderLibrary();
     });
-  });
+  }
+  renderStatusTabs();
 
   document.getElementById('searchInput').addEventListener('input', function(e){
     searchQuery = e.target.value;

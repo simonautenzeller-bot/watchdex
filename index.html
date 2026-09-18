@@ -5,7 +5,7 @@
 <script>
   try{
     var __t = localStorage.getItem('watchdex.theme');
-    if(__t === 'light' || __t === 'dark') document.documentElement.setAttribute('data-theme', __t);
+    if(__t === 'light' || __t === 'dark' || __t === 'pokedex') document.documentElement.setAttribute('data-theme', __t);
   }catch(e){}
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -101,6 +101,59 @@
     --st-dropped:#F0665A;
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 28px rgba(0,0,0,.45);
   }
+  /* Pokédex — red shell (sidebar) around a light screen panel (content), blue lens accent.
+     Every color below is chosen to clear WCAG AA (4.5:1) against the background it's actually used on. */
+  :root[data-theme="pokedex"]{
+    --bg:#E4EEF3;
+    --surface:#FBFCFC;
+    --surface-2:#DCE7ED;
+    --ink:#15181B;
+    --ink-soft:#3C4247;
+    --ink-faint:#5C6469;
+    --border:#1C1F22;
+    --border-soft:#B7C9D2;
+    --accent:#2478CC;
+    --accent-strong:#14549A;
+    --accent-tint:#D3ECFB;
+    --accent-solid:#2478CC;
+    --accent-solid-hover:#14549A;
+    --st-want:#B15F25;
+    --st-watching:#2478CC;
+    --st-seen:#218349;
+    --st-completed:#218349;
+    --st-dropped:#20242C;
+    --shadow:0 1px 2px rgba(20,20,25,.25), 0 12px 28px rgba(20,20,25,.3);
+  }
+  [data-theme="pokedex"] .sidebar{
+    background:#D0201E;
+    --surface:#A8130F;
+    --ink:#FFFFFF;
+    --ink-soft:#FCF8F8;
+    --ink-faint:#FCF8F8;
+    --border:#7A0C0A;
+    --border-soft:#8C0F0C;
+    --shadow:0 1px 2px rgba(20,4,4,.35), 0 10px 20px rgba(20,4,4,.4);
+    color:var(--ink);
+  }
+  /* the search/filter controls sit on a light inset panel, like a device's button cluster —
+     keeps the vivid red for the shell (brand bar, item list) while text stays high-contrast */
+  [data-theme="pokedex"] .sidebar .sidebar-fixed{
+    --surface:#FBFCFC;
+    --ink:#15181B;
+    --ink-soft:#3C4247;
+    --ink-faint:#5C6469;
+    --border:#1C1F22;
+    --border-soft:#B7C9D2;
+    background:var(--surface);
+    color:var(--ink);
+    border-radius:14px;
+    margin:0 10px 12px;
+    box-shadow:inset 0 0 0 1px var(--border-soft);
+  }
+  [data-theme="pokedex"] .status-tab.active{ color:#fff; }
+  [data-theme="pokedex"] .app-logo .logo-shell{ fill:#D0201E; stroke:#15181B; stroke-width:1; }
+  [data-theme="pokedex"] .app-logo .logo-lens{ fill:#2478CC; stroke:#15181B; stroke-width:0.6; }
+  [data-theme="pokedex"] .app-logo .logo-icon{ fill:#FFFFFF; }
 
   *{box-sizing:border-box;}
   body{
@@ -129,6 +182,9 @@
   .brand-title{ display:flex; align-items:center; gap:10px; min-width:0; }
   .brand-actions{ display:flex; align-items:center; gap:8px; flex:none; }
   .brand svg{ width:30px; height:30px; flex:none; }
+  .app-logo .logo-shell{ fill:#0A1A1C; stroke:#F0954A; stroke-width:1.2; }
+  .app-logo .logo-lens{ fill:none; }
+  .app-logo .logo-icon{ fill:#F0954A; }
   .brand h1{
     font-family:var(--font-display);
     font-weight:700;
@@ -600,9 +656,9 @@
     <div class="brand">
       <div class="brand-title">
         <svg viewBox="0 0 24 24" class="app-logo">
-          <rect x="2" y="2" width="20" height="20" rx="5" fill="#0A1A1C" stroke="#4FD0E0" stroke-width="0.6"/>
-          <rect x="5.5" y="5.5" width="13" height="13" rx="3" fill="#132A2D"/>
-          <path d="M10 8.3v7.4l6-3.7z" fill="#F0954A"/>
+          <circle class="logo-shell" cx="12" cy="12" r="10.5"/>
+          <circle class="logo-lens" cx="12" cy="12" r="6.6"/>
+          <path class="logo-icon" d="M10 8.3v7.4l6-3.7z"/>
         </svg>
         <div>
           <h1>Watchdex</h1>
@@ -756,6 +812,7 @@
         <button data-theme="system">System</button>
         <button data-theme="light">Hell</button>
         <button data-theme="dark">Dunkel</button>
+        <button data-theme="pokedex">Pokédex</button>
       </div>
     </div>
 
@@ -999,7 +1056,7 @@
     return '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"/>';
   }
   function effectiveTheme(){
-    if(currentTheme==='light') return 'light';
+    if(currentTheme==='light' || currentTheme==='pokedex') return 'light';
     if(currentTheme==='dark') return 'dark';
     try{ return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'; }catch(e){ return 'light'; }
   }
@@ -1021,7 +1078,7 @@
   }
   function applyTheme(pref){
     var root = document.documentElement;
-    if(pref === "light" || pref === "dark") root.setAttribute('data-theme', pref);
+    if(pref === "light" || pref === "dark" || pref === "pokedex") root.setAttribute('data-theme', pref);
     else root.removeAttribute('data-theme');
     Array.prototype.forEach.call(document.querySelectorAll('#themeToggle button'), function(btn){
       btn.classList.toggle('active', btn.getAttribute('data-theme')===pref);

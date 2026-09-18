@@ -160,20 +160,12 @@
   [data-theme="pokedex"] .app-logo .logo-icon{ fill:#FFFFFF; }
   [data-theme="pokedex"] .app-logo .logo-dot{ fill:#F2C94C; }
 
-  .pokedex-chrome{ display:none; align-items:center; justify-content:flex-end; gap:10px; padding:0 20px 12px; }
-  .pokedex-dots{ display:flex; gap:6px; flex:none; }
-  .pokedex-dots span{ width:8px; height:8px; border-radius:50%; display:block; }
+  .pokedex-dots{ display:none; align-items:center; justify-content:flex-end; gap:14px; padding:8px 20px 14px; }
+  .pokedex-dots span{ width:12px; height:12px; border-radius:50%; display:block; }
   .pokedex-dots span:nth-child(1){ background:#3DBE5C; }
   .pokedex-dots span:nth-child(2){ background:#F2C94C; }
   .pokedex-dots span:nth-child(3){ background:#F0954A; }
-  .pokedex-stripe{ display:none; height:4px; }
-  .pokedex-stripe div{ flex:1; }
-  .pokedex-stripe div:nth-child(1){ background:#3DBE5C; }
-  .pokedex-stripe div:nth-child(2){ background:#F2C94C; }
-  .pokedex-stripe div:nth-child(3){ background:#2478CC; }
-  .pokedex-stripe div:nth-child(4){ background:#F0954A; }
-  [data-theme="pokedex"] .pokedex-chrome{ display:flex; }
-  [data-theme="pokedex"] .pokedex-stripe{ display:flex; }
+  [data-theme="pokedex"] .pokedex-dots{ display:flex; }
 
   *{box-sizing:border-box;}
   body{
@@ -714,10 +706,7 @@
       </button>
       </div>
     </div>
-    <div class="pokedex-chrome">
-      <div class="pokedex-dots"><span></span><span></span><span></span></div>
-    </div>
-    <div class="pokedex-stripe"><div></div><div></div><div></div><div></div></div>
+    <div class="pokedex-dots"><span></span><span></span><span></span></div>
     <div class="totals-line" id="totalsLine"></div>
     <div class="sidebar-fixed">
       <div class="segmented" id="viewTabs">

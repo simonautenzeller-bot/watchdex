@@ -151,10 +151,12 @@
     box-shadow:inset 0 0 0 1px var(--border-soft);
   }
   [data-theme="pokedex"] .status-tab.active{ color:#fff; }
-  [data-theme="pokedex"] .app-logo .logo-shell{ fill:#D0201E; stroke:#15181B; stroke-width:1; }
-  [data-theme="pokedex"] .app-logo .logo-lens{ fill:#2478CC; stroke:#15181B; stroke-width:0.6; }
-  [data-theme="pokedex"] .app-logo .logo-glint{ fill:#8FC6EE; }
+  [data-theme="pokedex"] .app-logo .logo-tile{ fill:#D0201E; }
+  [data-theme="pokedex"] .app-logo .logo-swoosh{ fill:#8C0F0C; }
+  [data-theme="pokedex"] .app-logo .logo-ring{ fill:#FFFFFF; }
+  [data-theme="pokedex"] .app-logo .logo-core{ fill:#2478CC; }
   [data-theme="pokedex"] .app-logo .logo-icon{ fill:#FFFFFF; }
+  [data-theme="pokedex"] .app-logo .logo-dot{ fill:#F2C94C; }
 
   .pokedex-chrome{ display:none; align-items:center; justify-content:flex-end; gap:10px; padding:0 20px 12px; }
   .pokedex-dots{ display:flex; gap:6px; flex:none; }
@@ -198,10 +200,12 @@
   .brand-title{ display:flex; align-items:center; gap:10px; min-width:0; }
   .brand-actions{ display:flex; align-items:center; gap:8px; flex:none; }
   .brand svg{ width:30px; height:30px; flex:none; }
-  .app-logo .logo-shell{ fill:#0A1A1C; stroke:#F0954A; stroke-width:1.2; }
-  .app-logo .logo-lens{ fill:none; }
+  .app-logo .logo-tile{ fill:#132A2D; }
+  .app-logo .logo-swoosh{ fill:#0C1C1E; }
+  .app-logo .logo-ring{ fill:#F5F7F7; }
+  .app-logo .logo-core{ fill:#0C1C1E; }
   .app-logo .logo-icon{ fill:#F0954A; }
-  .app-logo .logo-glint{ fill:none; }
+  .app-logo .logo-dot{ fill:#8FC6BD; }
   .brand h1{
     font-family:var(--font-display);
     font-weight:700;
@@ -673,10 +677,17 @@
     <div class="brand">
       <div class="brand-title">
         <svg viewBox="0 0 24 24" class="app-logo">
-          <circle class="logo-shell" cx="12" cy="12" r="10.5"/>
-          <circle class="logo-lens" cx="12" cy="12" r="6.6"/>
-          <circle class="logo-glint" cx="9.8" cy="9.8" r="1.6"/>
-          <path class="logo-icon" d="M10 8.3v7.4l6-3.7z"/>
+          <defs>
+            <clipPath id="logoClip"><rect x="0" y="0" width="24" height="24" rx="5.28"/></clipPath>
+          </defs>
+          <g clip-path="url(#logoClip)">
+            <rect class="logo-tile" x="0" y="0" width="24" height="24"/>
+            <polygon class="logo-swoosh" points="0,19.2 10.08,19.2 13.92,16.32 24,16.32 24,19.2 14.88,19.2 11.04,22.08 0,22.08"/>
+            <circle class="logo-ring" cx="9.6" cy="9.12" r="5.76"/>
+            <circle class="logo-core" cx="9.6" cy="9.12" r="4.15"/>
+            <path class="logo-icon" d="M8.19 6.58 L8.19 11.66 L12.56 9.12 Z"/>
+            <circle class="logo-dot" cx="18.72" cy="5.28" r="1.08"/>
+          </g>
         </svg>
         <div>
           <h1>Watchdex</h1>

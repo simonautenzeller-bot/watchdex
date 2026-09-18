@@ -118,11 +118,16 @@
     --accent-tint:#D3ECFB;
     --accent-solid:#2478CC;
     --accent-solid-hover:#14549A;
-    --st-want:#B15F25;
+    --st-want:#8A7228;
     --st-watching:#2478CC;
     --st-seen:#218349;
     --st-completed:#218349;
-    --st-dropped:#20242C;
+    --st-dropped:#B15F25;
+    --dot-want:#F2C94C;
+    --dot-watching:#2478CC;
+    --dot-seen:#3DBE5C;
+    --dot-completed:#3DBE5C;
+    --dot-dropped:#F0954A;
     --shadow:0 1px 2px rgba(20,20,25,.25), 0 12px 28px rgba(20,20,25,.3);
   }
   [data-theme="pokedex"] .sidebar{
@@ -165,6 +170,7 @@
   .pokedex-dots span:nth-child(1){ background:#3DBE5C; }
   .pokedex-dots span:nth-child(2){ background:#F2C94C; }
   .pokedex-dots span:nth-child(3){ background:#F0954A; }
+  .pokedex-dots span:nth-child(4){ background:#2478CC; }
   [data-theme="pokedex"] .pokedex-dots{ display:flex; }
 
   *{box-sizing:border-box;}
@@ -706,7 +712,7 @@
       </button>
       </div>
     </div>
-    <div class="pokedex-dots"><span></span><span></span><span></span></div>
+    <div class="pokedex-dots"><span></span><span></span><span></span><span></span></div>
     <div class="totals-line" id="totalsLine"></div>
     <div class="sidebar-fixed">
       <div class="segmented" id="viewTabs">
@@ -919,6 +925,7 @@
     });
   }
   function statusColor(status){ return 'var(--st-'+status+')'; }
+  function dotColor(status){ return 'var(--dot-'+status+', var(--st-'+status+'))'; }
   function statusOptionsHtml(type, selected){
     var opts = type==='series' ? SERIES_STATUS : MOVIE_STATUS;
     return opts.map(function(o){
@@ -1183,7 +1190,7 @@
       else if(it.runtime){ metaBits.push(it.runtime+' Min.'); }
       if(it.rating) metaBits.push(it.rating+'/10');
       return '<button class="item-card'+(active?' active':'')+'" data-id="'+it.id+'">'+
-        '<div class="row1"><span class="dot" style="background:'+statusColor(it.status)+'"></span>'+
+        '<div class="row1"><span class="dot" style="background:'+dotColor(it.status)+'"></span>'+
         '<span class="type-flag">'+(it.type==='series'?'SERIE':'FILM')+'</span>'+
         '<span class="title">'+esc(it.title)+'</span></div>'+
         '<div class="meta">'+esc(metaBits.join(' · ')||'—')+'</div>'+

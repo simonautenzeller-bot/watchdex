@@ -9,13 +9,12 @@
     if(__t === 'light' || __t === 'dark' || __t === 'pokedex') document.documentElement.setAttribute('data-theme', __t);
   }catch(e){}
 </script>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Watchdex</title>
 <meta name="description" content="Film- & Serientracker: gesehen, will ich sehen, laufend, abgeschlossen, mit Statistik.">
 
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#D9DBE3" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0A1A1C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" id="themeColorMeta" content="#B8342E">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -29,7 +28,9 @@
 
 <style>
   html{ color-scheme: light dark; }
-  html, body{ margin:0; padding:0; max-width:100%; overflow-x:hidden; }
+  html{ overflow-x:hidden; }
+  html, body{ margin:0; padding:0; max-width:100%; }
+  body{ overflow-x:clip; }
   [hidden]{ display:none !important; }
   img{ max-width:100%; }
   input, select, textarea, button{ min-width:0; }
@@ -53,6 +54,7 @@
     --st-seen:#1E9E6B;
     --st-completed:#1E9E6B;
     --st-dropped:#C0392B;
+    --danger:#B23A2E;
     --shadow:0 1px 3px rgba(18,18,26,.14), 0 10px 24px rgba(18,18,26,.18);
     --radius-s:4px;
     --radius-m:10px;
@@ -80,6 +82,7 @@
       --st-seen:#4FE0A0;
       --st-completed:#4FE0A0;
       --st-dropped:#F0665A;
+      --danger:#F0665A;
       --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 28px rgba(0,0,0,.45);
     }
   }
@@ -100,6 +103,7 @@
     --st-seen:#4FE0A0;
     --st-completed:#4FE0A0;
     --st-dropped:#F0665A;
+    --danger:#F0665A;
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 28px rgba(0,0,0,.45);
   }
   /* Pokédex — red shell (sidebar) around a light screen panel (content), blue lens accent.
@@ -128,6 +132,7 @@
     --dot-seen:#3DBE5C;
     --dot-completed:#3DBE5C;
     --dot-dropped:#F0954A;
+    --danger:#B23A2E;
     --shadow:0 1px 2px rgba(20,20,25,.25), 0 12px 28px rgba(20,20,25,.3);
   }
   [data-theme="pokedex"] .sidebar{
@@ -263,6 +268,11 @@
   .segmented.small button{ font-size:.64rem; padding:5px 4px; }
   .segmented.wrap button{ flex:1 1 auto; min-width:96px; }
 
+  .filter-row{ display:flex; align-items:stretch; gap:8px; }
+  .filter-row .segmented.small{ flex:1; min-width:0; }
+  .filter-row .search-toggle{ display:none; }
+  .brand-strip{ display:contents; }
+
   .status-tabs{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
   .status-tab{
     font-family:var(--font-mono); font-size:.64rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
@@ -327,6 +337,9 @@
     border-color:var(--border);
     box-shadow:var(--shadow);
   }
+  .card-main{ display:flex; flex-direction:column; gap:5px; min-width:0; flex:1; }
+  .thumb-wrap{ display:none; }
+  .dot-hit{ display:flex; align-items:center; justify-content:center; flex:none; }
   .item-card .row1{ display:flex; align-items:center; gap:8px; min-width:0; }
   .dot{ width:8px; height:8px; border-radius:50%; flex:none; box-shadow:0 0 0 1px rgba(0,0,0,.45), 0 0 0 2px rgba(255,255,255,.6); }
   .type-flag{ font-family:var(--font-mono); font-size:.6rem; color:var(--ink-faint); flex:none; }
@@ -432,10 +445,11 @@
   .meta-field label{
     font-family:var(--font-mono); font-size:.6rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint);
   }
-  .meta-field input{
+  .meta-field input, .meta-field textarea{
     width:100%; font-family:var(--font-body); font-size:.88rem; padding:6px 9px;
     border:1px solid var(--border-soft); border-radius:var(--radius-s); background:var(--bg); color:var(--ink);
   }
+  textarea.autogrow{ resize:none; overflow:hidden; line-height:1.4; display:block; min-height:34px; }
 
   .season-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:22px; }
   .season-row{
@@ -541,7 +555,7 @@
   .modal h3{ font-family:var(--font-display); font-size:1.3rem; margin:0 0 18px; }
   .field{ display:flex; flex-direction:column; gap:5px; margin-bottom:14px; min-width:0; }
   .field label{ font-family:var(--font-mono); font-size:.65rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); }
-  .field input, .field select{
+  .field input, .field select, .field textarea{
     width:100%; font-family:var(--font-body); font-size:.92rem; padding:8px 11px;
     border:1px solid var(--border); border-radius:var(--radius-s); background:var(--bg); color:var(--ink);
   }
@@ -602,6 +616,57 @@
     font-family:var(--font-body);
   }
 
+  /* ---------- Rating slider ---------- */
+  .rating-head{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .rating-out{ font-family:var(--font-display); font-size:1rem; font-weight:600; letter-spacing:0; text-transform:none; color:var(--ink); }
+  input[type="range"].rating-range{
+    -webkit-appearance:none; appearance:none; width:100%; height:44px; margin:0; padding:0;
+    background:transparent; border:none; cursor:pointer; --fill:0%;
+  }
+  .rating-range::-webkit-slider-runnable-track{
+    height:8px; border-radius:100px; border:1px solid var(--border-soft);
+    background:linear-gradient(to right, var(--accent-solid) 0 var(--fill), var(--surface-2) var(--fill) 100%);
+  }
+  .rating-range::-webkit-slider-thumb{
+    -webkit-appearance:none; width:28px; height:28px; border-radius:50%; margin-top:-11px;
+    background:var(--accent-solid); border:3px solid var(--surface); box-shadow:0 0 0 1px var(--border), 0 2px 4px rgba(0,0,0,.3);
+  }
+  .rating-range::-moz-range-track{ height:8px; border-radius:100px; border:1px solid var(--border-soft); background:var(--surface-2); }
+  .rating-range::-moz-range-progress{ height:8px; border-radius:100px; background:var(--accent-solid); }
+  .rating-range::-moz-range-thumb{
+    width:22px; height:22px; border-radius:50%; background:var(--accent-solid);
+    border:3px solid var(--surface); box-shadow:0 0 0 1px var(--border);
+  }
+
+  /* ---------- Toast + action sheet ---------- */
+  .toast{
+    position:fixed; left:50%; transform:translateX(-50%); bottom:24px; z-index:40;
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    max-width:min(92vw, 480px); padding:6px 6px 6px 16px;
+    background:#15181B; color:#fff; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.4);
+    font-family:var(--font-body); font-size:.9rem;
+  }
+  .toast button{
+    min-height:44px; padding:0 12px; background:none; border:none; cursor:pointer; flex:none;
+    color:#8FD0FF; font-family:var(--font-mono); font-size:.76rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+  }
+  .sheet-grip{ width:40px; height:4px; border-radius:100px; background:var(--border-soft); margin:-8px auto 14px; display:none; }
+  .sheet-title{ font-family:var(--font-display); font-size:1.15rem; margin:0 0 6px; }
+  .sheet-sub{ font-family:var(--font-mono); font-size:.66rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin:0 0 8px; }
+  .sheet-opt{
+    display:flex; align-items:center; gap:14px; width:100%; min-height:52px; padding:0 6px;
+    background:none; border:none; border-bottom:1px solid var(--border-soft); cursor:pointer;
+    color:var(--ink); font-family:var(--font-body); font-size:1.02rem; text-align:left;
+  }
+  .sheet-opt:last-child{ border-bottom:none; }
+  .sheet-opt.current{ font-weight:600; }
+  .sheet-opt .dot{ width:14px; height:14px; }
+  .sheet-check{ margin-left:auto; color:var(--accent-strong); font-weight:700; }
+  .sheet-opt.danger{ color:var(--danger); }
+
+  /* ---------- Detail top bar (mobile only) ---------- */
+  .m-topbar{ display:none; }
+
   /* ---------- Bottom nav (mobile) ---------- */
   .bottom-nav{
     display:none;
@@ -618,39 +683,133 @@
   .bottom-nav button svg{ width:22px; height:22px; stroke-width:1.8; }
   .bottom-nav button.active{ color:var(--accent-solid); }
 
+  @keyframes sheetIn{ from{ transform:translateY(28px); opacity:.5; } to{ transform:none; opacity:1; } }
+
   @media (max-width: 760px){
-    body{ font-size:16px; }
+    :root{ --nav-h:65px; }
+    body{ font-size:16px; -webkit-tap-highlight-color:transparent; }
     .app{ grid-template-columns:1fr; }
-    .sidebar{ min-height:auto; border-right:none; border-bottom:1px solid var(--border-soft); }
-    .sidebar-scroll{ max-height:38vh; }
+    .sidebar{ min-height:auto; border-right:none; }
     #viewTabs{ display:none; }
     .bottom-nav{ display:flex; }
-    main{ padding:20px 16px calc(88px + env(safe-area-inset-bottom)); }
+    main{ padding:20px 16px calc(var(--nav-h) + 28px + env(safe-area-inset-bottom)); }
+
+    /* three mobile screens: list / detail / stats (set via body[data-mview]) */
+    body[data-mview="list"] main{ display:none; }
+    body[data-mview="list"] .sidebar{ min-height:100vh; min-height:100dvh; }
+    body[data-mview="detail"] .sidebar{ display:none; }
+    body[data-mview="stats"] .sidebar-fixed,
+    body[data-mview="stats"] .sidebar-scroll{ display:none; }
+    body.kb-open .bottom-nav, body.kb-open .add-btn{ display:none; }
+
+    /* compact header: title row, then totals + status dots in a single strip */
+    .brand{ padding:calc(12px + env(safe-area-inset-top)) 16px 10px; }
+    .brand h1{ font-size:1.4rem; }
+    .brand .sub{ font-size:.64rem; }
+    .brand svg{ width:34px; height:34px; }
+    .brand-strip{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:0 16px; border-bottom:1px solid var(--border-soft);
+    }
+    .brand-strip .totals-line{ order:1; padding:9px 0; border-bottom:none; font-size:.74rem; }
+    .brand-strip .pokedex-dots{ order:2; padding:0; gap:9px; }
+    .brand-strip .pokedex-dots span{ width:10px; height:10px; }
+
+    /* sticky filter panel (the list itself scrolls with the page, no nested scroller) */
+    .sidebar-fixed{
+      position:sticky; top:0; z-index:15;
+      padding:calc(10px + env(safe-area-inset-top)) 16px 12px;
+      background:var(--surface-2); border-bottom:1px solid var(--border-soft);
+    }
+    [data-theme="pokedex"] .sidebar .sidebar-fixed{
+      margin:0; border-radius:0 0 16px 16px; box-shadow:0 6px 14px rgba(20,4,4,.35);
+    }
+    .filter-row .segmented.small{ margin-top:0; }
+    .filter-row .search-toggle{ display:flex; width:52px; height:auto; min-height:44px; }
+    .filter-row .search-toggle[aria-expanded="true"]{ color:var(--accent-strong); border-color:var(--accent); }
+    .segmented button{ min-height:44px; font-size:.78rem; padding:0 6px; }
+    .segmented.small button{ min-height:44px; font-size:.78rem; padding:0 6px; }
+    .segmented.wrap button{ min-width:108px; }
+    .status-tabs{
+      flex-wrap:nowrap; overflow-x:auto; margin:8px -16px 0; padding:2px 16px 4px;
+      scrollbar-width:none; -webkit-overflow-scrolling:touch;
+    }
+    .status-tabs::-webkit-scrollbar{ display:none; }
+    .status-tab{ flex:none; min-height:44px; padding:0 16px; font-size:.74rem; white-space:nowrap; display:flex; align-items:center; }
+    .sidebar-fixed .search-input{ display:none; min-height:48px; margin-top:8px; font-size:1rem; padding:10px 12px; }
+    .sidebar-fixed.search-open .search-input{ display:block; }
+
+    /* "+ Neu" becomes a floating button */
+    .add-btn{
+      position:fixed; right:16px; bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom)); z-index:22;
+      width:auto; margin:0; min-height:52px; padding:0 22px; border-radius:100px; font-size:.82rem;
+      box-shadow:0 6px 16px rgba(0,0,0,.35);
+    }
+
+    /* list rows with poster thumbnails and a large status-dot tap zone */
+    .sidebar-scroll{
+      max-height:none; overflow:visible;
+      padding:6px 12px calc(var(--nav-h) + 96px + env(safe-area-inset-bottom));
+    }
+    .group-label{ font-size:.72rem; margin:20px 8px 8px; }
+    .item-card{
+      position:relative; flex-direction:row; align-items:center; gap:12px;
+      padding:8px; min-height:80px; margin-bottom:2px;
+      content-visibility:auto; contain-intrinsic-size:auto 80px;
+      -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+    }
+    .item-card:hover{ background:transparent; }
+    .item-card.active:hover, .item-card:active{ background:var(--surface); }
+    .thumb-wrap{ display:block; flex:none; width:46px; height:69px; }
+    .thumb{
+      display:flex; align-items:center; justify-content:center; width:46px; height:69px;
+      border-radius:6px; object-fit:cover; box-shadow:0 0 0 1px rgba(0,0,0,.25);
+    }
+    .thumb-ph{
+      background:rgba(0,0,0,.18); color:var(--ink);
+      font-family:var(--font-display); font-weight:700; font-size:1.3rem;
+    }
+    .card-main{ padding-right:44px; gap:3px; }
+    .item-card .row1{ gap:6px; }
+    .type-flag{ display:none; }
+    .item-card .title{ font-size:1.08rem; }
+    .item-card .meta{ padding-left:0; font-size:.78rem; }
+    .dot-hit{ position:absolute; right:0; top:50%; transform:translateY(-50%); width:48px; height:48px; }
+    .dot{ width:12px; height:12px; }
+
+    /* detail screen */
+    .m-topbar{
+      display:flex; align-items:center; gap:8px; position:sticky; top:0; z-index:15;
+      margin:-20px -16px 16px; padding:calc(6px + env(safe-area-inset-top)) 8px 6px;
+      background:var(--bg); border-bottom:1px solid var(--border-soft);
+    }
+    .m-back{
+      display:inline-flex; align-items:center; gap:2px; min-height:44px; padding:0 14px 0 6px;
+      background:none; border:none; cursor:pointer; color:var(--accent-strong);
+      font-family:var(--font-mono); font-weight:600; font-size:.8rem; letter-spacing:.04em; text-transform:uppercase;
+    }
+    .m-back svg{ width:22px; height:22px; }
+    .m-topbar .spacer{ flex:1; }
+    .item-head .icon-group{ display:none; }
     .item-head h2, .title-input{ font-size:1.7rem; }
-    .meta-grid{ grid-template-columns:1fr; gap:14px; padding:16px; }
-    .meta-field input{ font-size:1rem; padding:9px 11px; }
+    .title-input{ min-height:44px; }
+    .item-head-main{ gap:14px; }
+    .meta-grid{ gap:14px 12px; padding:16px; }
+    .meta-field input, .meta-field textarea{ font-size:1rem; padding:10px 12px; min-height:44px; }
+    .season-row{ grid-template-columns:70px 1fr 1fr 44px; gap:8px; padding:8px; }
+    .season-row input{ font-size:16px; min-height:44px; padding:8px; }
+    .season-row .rm-season{ min-width:44px; min-height:44px; font-size:1.1rem; }
+    .seed-banner button{ min-height:44px; padding:0 12px; }
     .barlist-row{ grid-template-columns:88px 1fr 56px; gap:8px; }
     .barlist-label, .barlist-value{ font-size:.8rem; }
 
-    .brand{ padding:18px 16px 12px; }
-    .brand h1{ font-size:1.5rem; }
-    .brand .sub{ font-size:.68rem; }
-    .sidebar-fixed{ padding:12px 16px; }
-    .segmented button{ font-size:.74rem; padding:9px 4px; }
-    .segmented.small button{ font-size:.7rem; padding:7px 4px; }
-    .segmented.wrap button{ min-width:108px; }
-    .add-btn{ padding:12px 14px; font-size:.8rem; }
-    .search-input{ font-size:1rem; padding:9px 11px; }
-
-    .item-card{ padding:12px 10px; }
-    .item-card .title{ font-size:1.05rem; }
-    .item-card .meta{ font-size:.76rem; }
-    .type-flag{ font-size:.66rem; }
-    .group-label{ font-size:.7rem; margin:20px 8px 8px; }
-
     .poster-thumb{ width:90px; height:135px; }
     .pill{ font-size:.72rem; padding:4px 10px; }
-    select.status-select{ font-size:.72rem; padding:6px 24px 6px 11px; }
+    select.status-select{
+      font-size:16px; min-height:44px; padding:8px 32px 8px 14px;
+      background-position:calc(100% - 17px) 55%, calc(100% - 12px) 55%;
+    }
+    .item-head .tags{ gap:8px; }
     .notes-area{ font-size:1rem; }
 
     .kpi-tile .value{ font-size:1.5rem; }
@@ -659,16 +818,35 @@
     .time-banner{ font-size:.95rem; }
 
     input, select, textarea{ font-size:16px; }
-    .icon-btn{ width:42px; height:42px; }
+    .icon-btn{ width:44px; height:44px; }
     .icon-btn svg{ width:18px; height:18px; }
     .bottom-nav button{ font-size:.74rem; padding:11px 4px 10px; }
     .bottom-nav button svg{ width:24px; height:24px; }
 
-    .modal{ padding:22px 18px; max-width:100%; }
+    /* dialogs become bottom sheets with a sticky action bar */
+    .overlay{ align-items:flex-end; padding:0; }
+    .modal, .modal.wide{
+      max-width:100%; border-radius:18px 18px 0 0; border-bottom:none;
+      padding:20px 18px 0; max-height:92vh; max-height:92dvh;
+      overscroll-behavior:contain; animation:sheetIn .22s ease-out;
+    }
+    .sheet-grip{ display:block; }
     .modal h3{ font-size:1.2rem; }
-    .field input, .field select{ font-size:1rem; padding:10px 12px; }
-    .primary-btn, .ghost-btn{ font-size:.76rem; padding:10px 16px; }
+    .field input, .field select, .field textarea{ font-size:1rem; padding:10px 12px; min-height:46px; }
+    .modal-actions{
+      position:sticky; bottom:0; margin:16px -18px 0; gap:10px;
+      padding:12px 18px calc(12px + env(safe-area-inset-bottom));
+      background:var(--surface); border-top:1px solid var(--border-soft);
+    }
+    .modal-actions .primary-btn{ flex:1; min-height:48px; font-size:.82rem; }
+    .modal-actions .ghost-btn{ min-height:48px; padding:0 18px; font-size:.82rem; }
+    .primary-btn, .ghost-btn{ font-size:.8rem; padding:10px 16px; min-height:44px; }
+    .settings-btn{ min-height:48px; }
+    .search-results{ max-height:none; overflow:visible; }
+    .search-result{ min-height:60px; padding:8px; }
+    .toast{ left:12px; right:12px; transform:none; max-width:none; bottom:calc(var(--nav-h) + 12px + env(safe-area-inset-bottom)); }
   }
+  @media (prefers-reduced-motion: reduce){ .modal{ animation:none !important; } }
 </style>
 </head>
 <body>
@@ -712,20 +890,27 @@
       </button>
       </div>
     </div>
-    <div class="pokedex-dots"><span></span><span></span><span></span><span></span></div>
-    <div class="totals-line" id="totalsLine"></div>
-    <div class="sidebar-fixed">
+    <div class="brand-strip">
+      <div class="pokedex-dots"><span></span><span></span><span></span><span></span></div>
+      <div class="totals-line" id="totalsLine"></div>
+    </div>
+    <div class="sidebar-fixed" id="sidebarFixed">
       <div class="segmented" id="viewTabs">
         <button data-view="library">Bibliothek</button>
         <button data-view="stats">Statistik</button>
       </div>
-      <div class="segmented small" id="typeFilter">
-        <button data-type="movie">Filme</button>
-        <button data-type="series">Serien</button>
+      <div class="filter-row">
+        <div class="segmented small" id="typeFilter">
+          <button data-type="movie">Filme</button>
+          <button data-type="series">Serien</button>
+        </div>
+        <button class="icon-btn search-toggle" id="searchToggle" aria-label="Suche ein-/ausblenden" aria-expanded="false" title="Suche">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+        </button>
       </div>
       <div class="status-tabs" id="statusFilterTabs"></div>
       <button class="add-btn" id="openAdd">+ Neu</button>
-      <input type="search" class="search-input" id="searchInput" placeholder="Titel, Regisseur, Darsteller …">
+      <input type="search" class="search-input" id="searchInput" placeholder="Titel, Regisseur, Darsteller …" enterkeyhint="search">
     </div>
     <div class="sidebar-scroll" id="libraryListWrap">
       <div id="libraryList"></div>
@@ -751,7 +936,8 @@
 
 <!-- Add modal -->
 <div class="overlay" id="overlay" hidden>
-  <div class="modal wide">
+  <div class="modal wide" role="dialog" aria-modal="true" aria-label="Neu anlegen">
+    <div class="sheet-grip"></div>
     <h3>Neu anlegen</h3>
     <div class="field">
       <label>Art</label>
@@ -769,7 +955,7 @@
 
     <div class="field">
       <label for="fTitle">Titel</label>
-      <input id="fTitle" type="text" placeholder="z.B. Dune">
+      <input id="fTitle" type="text" placeholder="z.B. Dune" autocapitalize="words">
     </div>
     <div class="field-row">
       <div class="field">
@@ -787,31 +973,27 @@
     </div>
     <div class="field">
       <label for="fDirector" id="fDirectorLabel">Regisseur</label>
-      <input id="fDirector" type="text" placeholder="Name">
+      <input id="fDirector" type="text" placeholder="Name" autocapitalize="words">
     </div>
     <div class="field">
       <label for="fCast">Haupt-Darsteller</label>
-      <input id="fCast" type="text" placeholder="Name, Name, Name">
+      <textarea id="fCast" class="autogrow" rows="2" placeholder="Name, Name, Name" autocapitalize="words"></textarea>
     </div>
     <div class="field-row" id="fMovieFields">
       <div class="field">
         <label for="fRuntime">Länge (Min.)</label>
-        <input id="fRuntime" type="number" placeholder="120">
-      </div>
-      <div class="field">
-        <label for="fRating">Bewertung (0–10)</label>
-        <input id="fRating" type="number" step="0.5" min="0" max="10" placeholder="–">
+        <input id="fRuntime" type="number" inputmode="numeric" placeholder="120">
       </div>
     </div>
     <div class="field-row" id="fSeriesFields" hidden>
       <div class="field">
         <label for="fEpRuntime">Länge/Episode (Min.)</label>
-        <input id="fEpRuntime" type="number" placeholder="45">
+        <input id="fEpRuntime" type="number" inputmode="numeric" placeholder="45">
       </div>
-      <div class="field">
-        <label for="fRatingSeries">Bewertung (0–10)</label>
-        <input id="fRatingSeries" type="number" step="0.5" min="0" max="10" placeholder="–">
-      </div>
+    </div>
+    <div class="field">
+      <label for="fRating" class="rating-head"><span>Bewertung</span><output class="rating-out" id="fRatingOut">Unbewertet</output></label>
+      <input class="rating-range" id="fRating" type="range" min="0" max="10" step="0.5" value="0">
     </div>
 
     <div class="modal-actions">
@@ -823,7 +1005,8 @@
 
 <!-- Settings modal -->
 <div class="overlay" id="settingsOverlay" hidden>
-  <div class="modal wide">
+  <div class="modal wide" role="dialog" aria-modal="true" aria-label="Einstellungen">
+    <div class="sheet-grip"></div>
     <h3>Einstellungen</h3>
 
     <div class="settings-section">
@@ -892,11 +1075,29 @@
   </div>
 </div>
 
+<!-- Quick status sheet (long-press / dot tap in the list) -->
+<div class="overlay" id="sheetOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-grip"></div>
+    <div class="sheet-sub">Status ändern</div>
+    <h3 class="sheet-title" id="sheetTitle"></h3>
+    <div id="sheetBody"></div>
+    <div class="modal-actions">
+      <button class="ghost-btn" id="closeSheet">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <span id="toastMsg"></span>
+  <button id="toastAction" hidden></button>
+</div>
+
 <script>
 (function(){
   "use strict";
 
-  var APP_VERSION = "1.0.0";
+  var APP_VERSION = "1.1.0";
   var STORE_KEY = "watchdex.v1";
   var THEME_KEY = "watchdex.theme";
   var TMDB_KEY_STORAGE = "watchdex.tmdbKey";
@@ -1010,6 +1211,63 @@
   if(!state.selected && state.items.length){ state.selected = state.items[0].id; }
   var searchQuery = "";
 
+  /* ---------- Mobile navigation state (transient, not persisted) ---------- */
+  var mobileDetail = false;
+  var listScrollY = 0;
+  var suppressPop = false;
+  function $(id){ return document.getElementById(id); }
+  function isMobile(){
+    try{ return window.matchMedia('(max-width: 760px)').matches; }catch(e){ return false; }
+  }
+  function leaveDetail(){
+    if(!mobileDetail) return;
+    mobileDetail = false;
+    if(history.state && history.state.wd){ suppressPop = true; history.back(); }
+  }
+  function restoreListScroll(){
+    var y = listScrollY;
+    requestAnimationFrame(function(){ window.scrollTo(0, y); });
+  }
+  function closeDetail(){
+    if(!mobileDetail) return;
+    leaveDetail();
+    renderAll();
+    restoreListScroll();
+  }
+  function openItem(id){
+    state.view = "library";
+    state.selected = id;
+    if(isMobile()){
+      if(!mobileDetail){
+        listScrollY = window.scrollY;
+        mobileDetail = true;
+        try{ history.pushState({wd:1}, ''); }catch(e){}
+      }
+      save(); renderAll();
+      window.scrollTo(0, 0);
+      return;
+    }
+    save(); renderAll();
+  }
+  window.addEventListener('popstate', function(){
+    if(suppressPop){ suppressPop = false; return; }
+    if(mobileDetail){ mobileDetail = false; renderAll(); restoreListScroll(); }
+  });
+
+  var toastTimer = null;
+  function hideToast(){ $('toast').hidden = true; }
+  function showToast(msg, actionLabel, onAction){
+    var btn = $('toastAction');
+    $('toastMsg').textContent = msg;
+    if(actionLabel){
+      btn.hidden = false; btn.textContent = actionLabel;
+      btn.onclick = function(){ hideToast(); if(onAction) onAction(); };
+    } else { btn.hidden = true; btn.onclick = null; }
+    $('toast').hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 6000);
+  }
+
   function getItem(id){
     for(var i=0;i<state.items.length;i++){ if(state.items[i].id===id) return state.items[i]; }
     return null;
@@ -1109,6 +1367,19 @@
       btn.title = 'Zu Dunkel wechseln';
     }
   }
+  var THEME_COLORS = {
+    light:{ shell:'#B7BACA', page:'#D9DBE3' },
+    dark:{ shell:'#204045', page:'#0A1A1C' },
+    pokedex:{ shell:'#B8342E', page:'#E4EEF3' }
+  };
+  function updateThemeColor(){
+    var meta = document.getElementById('themeColorMeta');
+    if(!meta) return;
+    var key = currentTheme==='pokedex' ? 'pokedex' : effectiveTheme();
+    var c = THEME_COLORS[key] || THEME_COLORS.light;
+    var onDetail = state.view==='library' && mobileDetail && isMobile();
+    meta.setAttribute('content', onDetail ? c.page : c.shell);
+  }
   function applyTheme(pref){
     var root = document.documentElement;
     if(pref === "light" || pref === "dark" || pref === "pokedex") root.setAttribute('data-theme', pref);
@@ -1117,9 +1388,15 @@
       btn.classList.toggle('active', btn.getAttribute('data-theme')===pref);
     });
     renderThemeQuickIcon();
+    updateThemeColor();
   }
   var currentTheme = loadTheme();
   applyTheme(currentTheme);
+  try{
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(){
+      if(currentTheme==='system'){ renderThemeQuickIcon(); updateThemeColor(); }
+    });
+  }catch(e){}
   Array.prototype.forEach.call(document.querySelectorAll('#themeToggle button'), function(btn){
     btn.addEventListener('click', function(){
       currentTheme = btn.getAttribute('data-theme');
@@ -1150,6 +1427,9 @@
     document.getElementById('libraryListWrap').hidden = state.view === 'stats';
     document.getElementById('typeFilter').hidden = state.view === 'stats';
     document.getElementById('statusFilterTabs').hidden = state.view === 'stats';
+    document.querySelector('.filter-row').hidden = state.view === 'stats';
+    document.body.setAttribute('data-mview', state.view === 'stats' ? 'stats' : (mobileDetail ? 'detail' : 'list'));
+    updateThemeColor();
   }
 
   /* ---------- Library / sidebar list ---------- */
@@ -1189,11 +1469,17 @@
       if(it.type==='series'){ metaBits.push((it.watchedEpisodes||0)+'/'+(it.totalEpisodes||0)+' Ep.'); }
       else if(it.runtime){ metaBits.push(it.runtime+' Min.'); }
       if(it.rating) metaBits.push(it.rating+'/10');
-      return '<button class="item-card'+(active?' active':'')+'" data-id="'+it.id+'">'+
-        '<div class="row1"><span class="dot" style="background:'+dotColor(it.status)+'"></span>'+
-        '<span class="type-flag">'+(it.type==='series'?'SERIE':'FILM')+'</span>'+
-        '<span class="title">'+esc(it.title)+'</span></div>'+
-        '<div class="meta">'+esc(metaBits.join(' · ')||'—')+'</div>'+
+      var thumb = it.poster
+        ? '<img class="thumb" loading="lazy" decoding="async" alt="" src="'+esc(it.poster.replace('/t/p/w300/','/t/p/w154/'))+'">'
+        : '<span class="thumb thumb-ph">'+esc((it.title||'?').charAt(0).toUpperCase())+'</span>';
+      return '<button class="item-card'+(active?' active':'')+'" data-id="'+it.id+'" aria-label="'+esc(it.title+' – '+STATUS_LABEL[it.status])+'">'+
+        '<div class="thumb-wrap">'+thumb+'</div>'+
+        '<div class="card-main">'+
+          '<div class="row1"><span class="dot-hit"><span class="dot" style="background:'+dotColor(it.status)+'"></span></span>'+
+          '<span class="type-flag">'+(it.type==='series'?'SERIE':'FILM')+'</span>'+
+          '<span class="title">'+esc(it.title)+'</span></div>'+
+          '<div class="meta">'+esc(metaBits.join(' · ')||'—')+'</div>'+
+        '</div>'+
       '</button>';
     }
 
@@ -1216,14 +1502,45 @@
       filtered.forEach(function(it){ html += renderCard(it); });
     }
     el.innerHTML = html;
-    Array.prototype.forEach.call(el.querySelectorAll('.item-card'), function(btn){
-      btn.addEventListener('click', function(){
-        state.view = "library";
-        state.selected = btn.getAttribute('data-id');
-        save(); renderAll();
-      });
-    });
   }
+
+  /* one delegated set of handlers for the whole list: tap = open, tap on dot / long-press = quick status sheet */
+  (function wireLibraryList(){
+    var el = document.getElementById('libraryList');
+    var lpTimer = null, lpFired = false, lpStart = null;
+    el.addEventListener('touchstart', function(e){
+      var card = e.target.closest && e.target.closest('.item-card');
+      if(!card || !isMobile()) return;
+      lpFired = false;
+      var t = e.touches[0];
+      lpStart = { x:t.clientX, y:t.clientY };
+      clearTimeout(lpTimer);
+      lpTimer = setTimeout(function(){
+        lpFired = true; lpTimer = null;
+        try{ if(navigator.vibrate) navigator.vibrate(15); }catch(err){}
+        openStatusSheet(card.getAttribute('data-id'));
+      }, 500);
+    }, {passive:true});
+    el.addEventListener('touchmove', function(e){
+      if(!lpTimer) return;
+      var t = e.touches[0];
+      if(Math.abs(t.clientX-lpStart.x) > 8 || Math.abs(t.clientY-lpStart.y) > 8){ clearTimeout(lpTimer); lpTimer = null; }
+    }, {passive:true});
+    ['touchend','touchcancel'].forEach(function(n){
+      el.addEventListener(n, function(){ clearTimeout(lpTimer); lpTimer = null; }, {passive:true});
+    });
+    el.addEventListener('contextmenu', function(e){
+      if(isMobile() && e.target.closest && e.target.closest('.item-card')) e.preventDefault();
+    });
+    el.addEventListener('click', function(e){
+      var card = e.target.closest && e.target.closest('.item-card');
+      if(!card) return;
+      if(lpFired){ lpFired = false; e.preventDefault(); return; }
+      var id = card.getAttribute('data-id');
+      if(isMobile() && e.target.closest('.dot-hit')){ openStatusSheet(id); return; }
+      openItem(id);
+    });
+  })();
 
   function renderMain(){
     if(state.view === "stats"){ renderStats(); return; }
@@ -1248,16 +1565,26 @@
 
     var metaFields = '';
     metaFields += metaField('fdYear','Jahr', it.year||'', 'number');
-    metaFields += metaField('fdGenre','Genre', it.genre||'', 'text', true);
-    metaFields += metaField('fdDirector', it.type==='series' ? 'Creator' : 'Regisseur', it.director||'', 'text', true);
-    metaFields += metaField('fdCast','Haupt-Darsteller', it.cast||'', 'text', true);
     if(it.type==='movie'){
       metaFields += metaField('fdRuntime','Länge (Min.)', it.runtime||'', 'number');
-      metaFields += metaField('fdRating','Bewertung (0–10)', it.rating||'', 'number');
     } else {
       metaFields += metaField('fdEpRuntime','Länge/Episode (Min.)', it.episodeRuntime||'', 'number');
-      metaFields += metaField('fdRating','Bewertung (0–10)', it.rating||'', 'number');
     }
+    metaFields += metaField('fdGenre','Genre', it.genre||'', 'textarea', true);
+    metaFields += metaField('fdDirector', it.type==='series' ? 'Creator' : 'Regisseur', it.director||'', 'textarea', true);
+    metaFields += metaField('fdCast','Haupt-Darsteller', it.cast||'', 'textarea', true);
+    metaFields += ratingField('fdRating', it.rating);
+
+    var trashSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.8 12.1a2 2 0 0 1-2 1.9H9.8a2 2 0 0 1-2-1.9L7 7"/></svg>';
+    var topbar =
+      '<div class="m-topbar">'+
+        '<button class="m-back" id="mBack" aria-label="Zurück zur Bibliothek">'+
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>'+
+          '<span>Bibliothek</span>'+
+        '</button>'+
+        '<span class="spacer"></span>'+
+        '<button class="icon-btn" id="deleteItemM" title="Eintrag löschen" aria-label="Eintrag löschen">'+trashSvg+'</button>'+
+      '</div>';
 
     var seasonsHtml = '';
     if(it.type==='series'){
@@ -1276,12 +1603,13 @@
     }
 
     main.innerHTML =
+      topbar+
       seedNote+
       '<div class="item-head">'+
         '<div class="item-head-main">'+
           poster+
           '<div style="min-width:0;flex:1">'+
-            '<input class="title-input" id="titleInput" type="text" value="'+esc(it.title)+'" aria-label="Titel">'+
+            '<input class="title-input" id="titleInput" type="text" value="'+esc(it.title)+'" aria-label="Titel" autocapitalize="words">'+
             '<div class="tags">'+
               '<select class="status-select" id="typeSelect">'+
                 '<option value="movie"'+(it.type==='movie'?' selected':'')+'>Film</option>'+
@@ -1292,7 +1620,7 @@
           '</div>'+
         '</div>'+
         '<div class="icon-group">'+
-          '<button class="icon-btn" id="deleteItem" title="Eintrag löschen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.8 12.1a2 2 0 0 1-2 1.9H9.8a2 2 0 0 1-2-1.9L7 7"/></svg></button>'+
+          '<button class="icon-btn" id="deleteItem" title="Eintrag löschen" aria-label="Eintrag löschen">'+trashSvg+'</button>'+
         '</div>'+
       '</div>'+
       '<div class="meta-grid">'+metaFields+'</div>'+
@@ -1304,10 +1632,36 @@
     wireItemPanelEvents(it);
   }
   function metaField(id, label, value, type, wide){
+    var control = type==='textarea'
+      ? '<textarea id="'+id+'" class="autogrow" rows="1" autocapitalize="words">'+esc(value)+'</textarea>'
+      : '<input id="'+id+'" type="'+type+'" value="'+esc(value)+'"'+(type==='number'?' step="any" inputmode="decimal"':'')+'>';
     return '<div class="meta-field'+(wide?' wide':'')+'">'+
-      '<label for="'+id+'">'+esc(label)+'</label>'+
-      '<input id="'+id+'" type="'+type+'" value="'+esc(value)+'"'+(type==='number'?' step="any"':'')+'>'+
+      '<label for="'+id+'">'+esc(label)+'</label>'+control+
     '</div>';
+  }
+  function ratingText(v){ return v>0 ? (v+'/10') : 'Unbewertet'; }
+  function ratingField(id, value){
+    var v = parseFloat(value) || 0;
+    return '<div class="meta-field wide">'+
+      '<label for="'+id+'" class="rating-head"><span>Bewertung</span><output class="rating-out" id="'+id+'Out">'+ratingText(v)+'</output></label>'+
+      '<input class="rating-range" id="'+id+'" type="range" min="0" max="10" step="0.5" value="'+v+'" style="--fill:'+(v*10)+'%">'+
+    '</div>';
+  }
+  function syncRating(id){
+    var el = document.getElementById(id), out = document.getElementById(id+'Out');
+    if(!el || !out) return;
+    var v = parseFloat(el.value) || 0;
+    out.textContent = ratingText(v);
+    el.style.setProperty('--fill', (v*10)+'%');
+  }
+  function autoGrow(el){
+    el.style.height = 'auto';
+    el.style.height = (el.scrollHeight + 2) + 'px';
+  }
+  function wireAutoGrow(el){
+    el.addEventListener('input', function(){ autoGrow(el); });
+    el.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); el.blur(); } });
+    autoGrow(el);
   }
 
   function recalcSeriesTotals(it){
@@ -1332,6 +1686,61 @@
       it.runtime = it.episodeRuntime || 0;
     }
   }
+
+  function deleteItem(it){
+    var idx = state.items.indexOf(it);
+    if(idx < 0) return;
+    var wasDetail = mobileDetail;
+    state.items.splice(idx, 1);
+    state.selected = state.items.length ? state.items[0].id : null;
+    save();
+    leaveDetail();
+    renderAll();
+    if(wasDetail) restoreListScroll();
+    showToast('„'+it.title+'" gelöscht', 'Rückgängig', function(){
+      state.items.splice(Math.min(idx, state.items.length), 0, it);
+      if(!state.selected) state.selected = it.id;
+      save(); renderAll();
+    });
+  }
+
+  function openStatusSheet(id){
+    var it = getItem(id);
+    if(!it) return;
+    var opts = it.type==='series' ? SERIES_STATUS : MOVIE_STATUS;
+    $('sheetTitle').textContent = it.title;
+    $('sheetBody').innerHTML = opts.map(function(o){
+      var cur = o[0]===it.status;
+      return '<button class="sheet-opt'+(cur?' current':'')+'" data-status="'+o[0]+'" data-id="'+it.id+'">'+
+        '<span class="dot" style="background:'+dotColor(o[0])+'"></span>'+
+        '<span>'+o[1]+'</span>'+(cur?'<span class="sheet-check">✓</span>':'')+
+      '</button>';
+    }).join('') +
+    '<button class="sheet-opt" data-action="open" data-id="'+it.id+'"><span>Details öffnen</span></button>'+
+    '<button class="sheet-opt danger" data-action="delete" data-id="'+it.id+'"><span>Löschen</span></button>';
+    $('sheetOverlay').hidden = false;
+  }
+  function closeSheet(){ $('sheetOverlay').hidden = true; }
+  $('closeSheet').addEventListener('click', closeSheet);
+  $('sheetOverlay').addEventListener('click', function(e){ if(e.target === $('sheetOverlay')) closeSheet(); });
+  $('sheetBody').addEventListener('click', function(e){
+    var btn = e.target.closest && e.target.closest('.sheet-opt');
+    if(!btn) return;
+    var it = getItem(btn.getAttribute('data-id'));
+    if(!it) return;
+    closeSheet();
+    var action = btn.getAttribute('data-action');
+    if(action === 'open'){ openItem(it.id); return; }
+    if(action === 'delete'){ deleteItem(it); return; }
+    var newStatus = btn.getAttribute('data-status');
+    if(newStatus === it.status) return;
+    var oldStatus = it.status;
+    it.status = newStatus;
+    save(); renderAll();
+    showToast('„'+it.title+'" → '+STATUS_LABEL[newStatus], 'Rückgängig', function(){
+      it.status = oldStatus; save(); renderAll();
+    });
+  });
 
   function wireItemPanelEvents(it){
     var main = document.getElementById('main');
@@ -1359,12 +1768,15 @@
     });
     titleInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') e.target.blur(); });
 
-    document.getElementById('deleteItem').addEventListener('click', function(){
-      if(!confirm('„'+it.title+'" wirklich löschen?')) return;
-      state.items = state.items.filter(function(x){ return x.id!==it.id; });
-      state.selected = state.items.length ? state.items[0].id : null;
-      save(); renderAll();
-    });
+    document.getElementById('deleteItem').addEventListener('click', function(){ deleteItem(it); });
+    var deleteMobile = document.getElementById('deleteItemM');
+    if(deleteMobile) deleteMobile.addEventListener('click', function(){ deleteItem(it); });
+    var backBtn = document.getElementById('mBack');
+    if(backBtn) backBtn.addEventListener('click', closeDetail);
+
+    Array.prototype.forEach.call(main.querySelectorAll('textarea.autogrow'), wireAutoGrow);
+    var ratingEl = document.getElementById('fdRating');
+    if(ratingEl) ratingEl.addEventListener('input', function(){ syncRating('fdRating'); });
 
     function bindMeta(id, field, isNum){
       var el = document.getElementById(id);
@@ -1531,8 +1943,14 @@
 
   Array.prototype.forEach.call(document.querySelectorAll('[data-view]'), function(btn){
     btn.addEventListener('click', function(){
-      state.view = btn.getAttribute('data-view');
+      var next = btn.getAttribute('data-view');
+      var wasDetail = mobileDetail;
+      var sameTab = state.view === next;
+      leaveDetail();
+      state.view = next;
       save(); renderAll();
+      if(next === 'library' && wasDetail) restoreListScroll();
+      else if(sameTab || next === 'stats') window.scrollTo(0, 0);
     });
   });
   var VALID_STATUS_BY_TYPE = {
@@ -1552,10 +1970,18 @@
       var valid = VALID_STATUS_BY_TYPE[state.typeFilter] || [];
       if(state.statusFilter !== 'all' && valid.indexOf(state.statusFilter) === -1) state.statusFilter = 'all';
       renderStatusTabs();
-      save(); renderLibrary();
+      save(); renderLibrary(); scrollListToTop();
     });
   });
   renderTypeFilter();
+
+  function scrollListToTop(){
+    if(!isMobile()) return;
+    var wrap = document.getElementById('libraryListWrap');
+    var bar = document.getElementById('sidebarFixed');
+    var target = wrap.getBoundingClientRect().top + window.scrollY - (bar ? bar.offsetHeight : 0);
+    if(window.scrollY > target) window.scrollTo(0, Math.max(0, target));
+  }
 
   function renderStatusTabs(){
     var el = document.getElementById('statusFilterTabs');
@@ -1574,15 +2000,28 @@
       btn.addEventListener('click', function(){
         state.statusFilter = btn.getAttribute('data-status');
         Array.prototype.forEach.call(el.querySelectorAll('.status-tab'), function(b){ b.classList.toggle('active', b===btn); });
-        save(); renderLibrary();
+        save(); renderLibrary(); scrollListToTop();
       });
     });
   }
   renderStatusTabs();
 
-  document.getElementById('searchInput').addEventListener('input', function(e){
+  var searchInputEl = document.getElementById('searchInput');
+  var searchToggleEl = document.getElementById('searchToggle');
+  var sidebarFixedEl = document.getElementById('sidebarFixed');
+  searchInputEl.addEventListener('input', function(e){
     searchQuery = e.target.value;
-    renderLibrary();
+    renderLibrary(); scrollListToTop();
+  });
+  searchInputEl.addEventListener('keydown', function(e){ if(e.key === 'Enter') searchInputEl.blur(); });
+  function setSearchOpen(open){
+    sidebarFixedEl.classList.toggle('search-open', open);
+    searchToggleEl.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if(open){ searchInputEl.focus(); }
+    else if(searchQuery){ searchInputEl.value = ''; searchQuery = ''; renderLibrary(); }
+  }
+  searchToggleEl.addEventListener('click', function(){
+    setSearchOpen(!sidebarFixedEl.classList.contains('search-open'));
   });
 
   /* ---------- Add modal ---------- */
@@ -1645,6 +2084,7 @@
     document.getElementById('fGenre').value = mapped.genre || '';
     document.getElementById('fDirector').value = mapped.director || '';
     document.getElementById('fCast').value = mapped.cast || '';
+    autoGrow(document.getElementById('fCast'));
     if(addType==='movie'){
       document.getElementById('fRuntime').value = mapped.runtime || '';
     } else {
@@ -1659,12 +2099,21 @@
     document.getElementById('fSearch').value = '';
     document.getElementById('fSearchResults').innerHTML = '';
     document.getElementById('fSearchHint').hidden = !!getTmdbKey();
-    ['fTitle','fYear','fGenre','fDirector','fCast','fRuntime','fRating','fEpRuntime','fRatingSeries'].forEach(function(id){
+    ['fTitle','fYear','fGenre','fDirector','fCast','fRuntime','fEpRuntime'].forEach(function(id){
       document.getElementById(id).value = '';
     });
+    document.getElementById('fRating').value = '0';
+    syncRating('fRating');
     overlay.hidden = false;
-    document.getElementById('fSearch').focus();
+    autoGrow(document.getElementById('fCast'));
+    if(!isMobile()) document.getElementById('fSearch').focus();
   });
+  document.getElementById('fRating').addEventListener('input', function(){ syncRating('fRating'); });
+  (function(){
+    var castEl = document.getElementById('fCast');
+    castEl.addEventListener('input', function(){ autoGrow(castEl); });
+    castEl.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); castEl.blur(); } });
+  })();
   document.getElementById('cancelAdd').addEventListener('click', function(){ overlay.hidden = true; });
   overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.hidden = true; });
 
@@ -1682,20 +2131,22 @@
       tmdbId: addDraft ? addDraft.tmdbId : null,
       notes:"", addedAt: Date.now()
     };
+    base.rating = parseFloat(document.getElementById('fRating').value) || 0;
     if(addType==='movie'){
       base.runtime = parseInt(document.getElementById('fRuntime').value,10) || 0;
-      base.rating = parseFloat(document.getElementById('fRating').value) || 0;
     } else {
       base.episodeRuntime = parseInt(document.getElementById('fEpRuntime').value,10) || 45;
-      base.rating = parseFloat(document.getElementById('fRatingSeries').value) || 0;
       base.seasons = (addDraft && addDraft.seasons) ? addDraft.seasons : [{season:1, watched:0, total:0}];
       recalcSeriesTotals(base);
     }
     state.items.unshift(base);
-    state.view = "library";
-    state.selected = base.id;
     overlay.hidden = true;
-    save(); renderAll();
+    if(state.typeFilter !== base.type){ state.typeFilter = base.type; renderTypeFilter(); }
+    var activeGroup = GROUP_DEFS.filter(function(g){ return g.key===state.statusFilter; })[0];
+    if(state.statusFilter !== 'all' && (!activeGroup || !activeGroup.match(base))) state.statusFilter = 'all';
+    renderStatusTabs();
+    openItem(base.id);
+    showToast('„'+base.title+'" angelegt');
   });
 
   /* ---------- Settings modal ---------- */
@@ -1914,7 +2365,19 @@
     if(e.key!=='Escape') return;
     if(!overlay.hidden) overlay.hidden = true;
     if(!settingsOverlay.hidden) settingsOverlay.hidden = true;
+    if(!$('sheetOverlay').hidden) closeSheet();
   });
+
+  function isTextField(el){
+    if(!el || !el.tagName) return false;
+    if(el.tagName === 'TEXTAREA') return true;
+    if(el.tagName !== 'INPUT') return false;
+    return ['button','checkbox','radio','range','file','submit','reset','color','image'].indexOf((el.type||'').toLowerCase()) === -1;
+  }
+  document.addEventListener('focusin', function(e){
+    if(isMobile() && isTextField(e.target)) document.body.classList.add('kb-open');
+  });
+  document.addEventListener('focusout', function(){ document.body.classList.remove('kb-open'); });
 
   setAddType('movie');
   renderAll();

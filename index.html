@@ -602,6 +602,17 @@
     background:var(--bg); color:var(--ink); cursor:pointer; text-align:center;
   }
   .settings-btn:hover{ border-color:var(--accent); color:var(--accent-strong); }
+  :root{
+    --ab-card:var(--surface); --ab-text:var(--ink); --ab-muted:var(--ink-soft); --ab-border:var(--border);
+    --ab-accent:var(--accent-solid); --ab-accent-text:#fff; --ab-warn:var(--accent); --ab-radius:var(--radius-s); --ab-input:var(--bg);
+  }
+  .ab-panel{ font-family:var(--font-body); font-size:.9rem; }
+  .ab-actions .settings-btn{ flex:none; }
+  .ab-primary{ background:var(--accent-solid); color:#fff; border-color:transparent; }
+  .ab-primary:hover{ background:var(--accent-solid-hover); color:#fff; }
+  .ab-banner{ font-family:var(--font-body); }
+  .ab-banner-actions .settings-btn{ flex:none; }
+  .ab-input{ font-family:var(--font-mono); font-size:.8rem; }
   .version-line{ font-family:var(--font-mono); font-size:.76rem; color:var(--ink-faint); }
   .version-line b{ color:var(--ink-soft); }
 
@@ -1051,6 +1062,11 @@
     </div>
 
     <div class="settings-section">
+      <h4>Wochen-Backup</h4>
+      <div id="backupSlot"></div>
+    </div>
+
+    <div class="settings-section">
       <h4>Über</h4>
       <div class="version-line">Watchdex · Version <b id="versionText"></b></div>
     </div>
@@ -1093,11 +1109,12 @@
   <button id="toastAction" hidden></button>
 </div>
 
+<script src="backup.js"></script>
 <script>
 (function(){
   "use strict";
 
-  var APP_VERSION = "1.1.0";
+  var APP_VERSION = "1.2.0";
   var STORE_KEY = "watchdex.v1";
   var THEME_KEY = "watchdex.theme";
   var TMDB_KEY_STORAGE = "watchdex.tmdbKey";
@@ -1191,11 +1208,13 @@
     };
   }
 
+  var wasFresh = false;
   function load(){
     try{
       var raw = localStorage.getItem(STORE_KEY);
       if(raw) return JSON.parse(raw);
     }catch(e){}
+    wasFresh = true;
     var seed = seedData();
     try{ localStorage.setItem(STORE_KEY, JSON.stringify(seed)); }catch(e){}
     return seed;
@@ -2175,8 +2194,19 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      AppBackup.markExternal('Export');
     }catch(e){}
   });
+
+  // Gemeinsam für den Import-Button und das Wiederherstellen aus dem Backup-Hinweis.
+  function applyImportedItems(parsed){
+    state.items = parsed.items;
+    state.selected = state.items.length ? state.items[0].id : null;
+    state.seeded = false;
+    state.view = "library";
+    save(); renderAll();
+  }
+
   document.getElementById('importDataBtn').addEventListener('click', function(){
     document.getElementById('importFile').click();
   });
@@ -2189,12 +2219,9 @@
         var parsed = JSON.parse(reader.result);
         if(!parsed || !Array.isArray(parsed.items)) throw new Error('invalid');
         if(!confirm('Vorhandene '+state.items.length+' Einträge durch '+parsed.items.length+' importierte Einträge ersetzen?')) return;
-        state.items = parsed.items;
-        state.selected = state.items.length ? state.items[0].id : null;
-        state.seeded = false;
-        state.view = "library";
-        save(); renderAll();
+        applyImportedItems(parsed);
         settingsOverlay.hidden = true;
+        AppBackup.markExternal('Wiederherstellung');
       }catch(err){
         alert('Diese Datei sieht nicht wie ein gültiges Watchdex-Backup aus.');
       }
@@ -2202,6 +2229,26 @@
     reader.readAsText(file);
     e.target.value = "";
   });
+
+  /* ---------- Wochen-Backup (backup.js) ---------- */
+  AppBackup.init({
+    appId: "watchdex",
+    appName: "Watchdex",
+    filePrefix: "Watchdex",
+    getData: function(){ return state; },
+    restore: function(text){
+      var parsed;
+      try{ parsed = JSON.parse(text); }catch(e){ return false; }
+      if(!parsed || !Array.isArray(parsed.items)) return false;
+      applyImportedItems(parsed);
+      return true;
+    },
+    isFresh: function(){ return wasFresh; },
+    bannerClass: "ab-banner--float",
+    btnClass: "settings-btn",
+    btnPrimaryClass: "settings-btn ab-primary"
+  });
+  document.getElementById('backupSlot').appendChild(AppBackup.createPanel());
 
   /* ---------- Moviebreak import (raw -> TMDB enrichment) ---------- */
   var importOverlay = document.getElementById('importOverlay');

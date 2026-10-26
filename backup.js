@@ -14,7 +14,7 @@
   var GUID_RE = /^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 
   var CSS =
-    ".ab-panel [hidden],.ab-banner[hidden]{display:none!important}" +
+    ".ab-panel [hidden],.ab-banner[hidden],.ab-dialog [hidden]{display:none!important}" +
     ".ab-panel p{margin:0 0 10px}" +
     ".ab-help,.ab-status{font-size:.92em;color:var(--ab-muted,inherit)}" +
     ".ab-adv{margin:16px 0 4px}.ab-adv summary{cursor:pointer;font-weight:700;margin:0 0 10px}" +
@@ -43,6 +43,7 @@
   var checking = false;
   var pending = false;
   var deferred = false;
+  var lastManual = null;
   var panels = [];
   var banner = null;
   var toastEl = null;
@@ -87,13 +88,14 @@
     toastTimer = setTimeout(function () { toastEl.classList.remove("ab-show"); }, 2600);
   }
 
-  function confirmDialog(message, okLabel) {
-    if (typeof confirmEl.showModal !== "function") return Promise.resolve(window.confirm(message));
+  function confirmDialog(message, okLabel, infoOnly) {
+    if (typeof confirmEl.showModal !== "function") return Promise.resolve(infoOnly ? window.alert(message) : window.confirm(message));
     return new Promise(function (resolve) {
       var ok = confirmEl.querySelector("[data-ab-ok]");
       var cancel = confirmEl.querySelector("[data-ab-cancel]");
       confirmEl.querySelector("[data-ab-msg]").textContent = message;
       ok.textContent = okLabel || "OK";
+      cancel.hidden = !!infoOnly;
       var done = false;
       function finish(result) {
         if (done) return;
@@ -179,14 +181,14 @@
       if (shareable) {
         try {
           await navigator.share({ files: [shareable], title: opts.appName + " Backup" });
-          return "Teilen";
+          return { via: "Teilen", file: shareable.name };
         } catch (e) {
           if (e && e.name === "AbortError") return null;
         }
       }
     }
     downloadJson(json, base + ".json");
-    return "Download";
+    return { via: "Download", file: base + ".json" };
   }
 
   // ---------- OneDrive (Microsoft Graph, Authorization-Code-Flow mit PKCE, ohne Server) ----------
@@ -296,8 +298,8 @@
 
   // ---------- Ablauf ----------
 
-  function markBackup(via) {
-    writeJson(key("meta"), { lastAt: new Date().toISOString(), via: via });
+  function markBackup(via, file) {
+    writeJson(key("meta"), { lastAt: new Date().toISOString(), via: via, file: file || "" });
     pending = false;
     renderAll();
   }
@@ -332,9 +334,10 @@
 
       if (!interactive) return "needs-tap";
 
-      var via = await shareOrDownload(json, stamp);
-      if (!via) return "cancelled";
-      markBackup(via);
+      var res = await shareOrDownload(json, stamp);
+      if (!res) return "cancelled";
+      lastManual = res;
+      markBackup(res.via, res.file);
       return "manual";
     } finally {
       busy = false;
@@ -374,8 +377,14 @@
   async function backupNow() {
     if (!isActive()) { toast("Im Demo-Modus gibt es kein Backup"); return; }
     var result = await runBackup(true);
-    if (result === "folder") toast("Backup im Ordner gespeichert");
-    else if (result === "manual") toast("Backup erstellt");
+    if (result === "folder") {
+      toast("Backup im Ordner „" + folderHandle.name + "“ gespeichert");
+    } else if (result === "manual" && lastManual && lastManual.via === "Download") {
+      confirmDialog("Die Datei „" + lastManual.file + "“ wurde in den Download-Ordner deines Geräts geladen. " +
+        "Sie liegt damit noch nicht in OneDrive: Öffne die OneDrive-App und lade sie dort über „Hochladen“ aus dem Ordner „Downloads“ hoch.", "Verstanden", true);
+    } else if (result === "manual") {
+      toast("Backup geteilt");
+    }
   }
 
   function startRestore() { fileInput.click(); }
@@ -442,6 +451,10 @@
       var age = Math.floor((Date.now() - new Date(meta.lastAt).getTime()) / 86400000);
       status = "Letztes Backup: " + formatDate(meta.lastAt) + " (" + (meta.via || "–") + ") · " +
         (age >= INTERVAL_DAYS ? "jetzt fällig" : "nächstes in " + daysText(INTERVAL_DAYS - age));
+      if (meta.via === "Download") {
+        status += ". Die Datei „" + (meta.file || "…") + "“ liegt im Download-Ordner deines Geräts, noch nicht in OneDrive. " +
+          "In der OneDrive-App über „Hochladen“ ablegen.";
+      }
     }
     el.querySelector("[data-ab-status]").textContent = status;
 

@@ -17,7 +17,7 @@
     ".ab-panel [hidden],.ab-banner[hidden]{display:none!important}" +
     ".ab-panel p{margin:0 0 10px}" +
     ".ab-help,.ab-status{font-size:.92em;color:var(--ab-muted,inherit)}" +
-    ".ab-sub{margin:16px 0 8px!important;font-weight:700}" +
+    ".ab-adv{margin:16px 0 4px}.ab-adv summary{cursor:pointer;font-weight:700;margin:0 0 10px}" +
     ".ab-actions{display:flex;flex-direction:column;gap:8px;margin:0 0 4px}" +
     ".ab-btn{font:inherit;cursor:pointer;padding:10px 14px;border-radius:var(--ab-radius,8px);border:1px solid var(--ab-border,#888);background:transparent;color:inherit}" +
     ".ab-btn--primary{background:var(--ab-accent,#2e7d32);color:var(--ab-accent-text,#fff);border-color:transparent}" +
@@ -456,8 +456,8 @@
     } else if (connected) {
       help = "Beim Öffnen lädt die App ein fälliges Backup automatisch in dein OneDrive (siehe unten).";
     } else {
-      help = "Dein Browser darf nicht selbst in Ordner schreiben. Verbinde unten OneDrive, " +
-        "oder die App erinnert dich einmal pro Woche und du legst die Datei über „Teilen“ in OneDrive ab.";
+      help = "Dein Browser darf nicht selbst in Ordner schreiben. Die App erinnert dich deshalb einmal pro Woche: " +
+        "tippe dann auf „Jetzt sichern“ und wähle im Teilen-Menü OneDrive (bzw. am iPhone „In Dateien sichern“ → OneDrive).";
     }
     el.querySelector("[data-ab-help]").textContent = help;
 
@@ -477,6 +477,8 @@
       : "Einmal bei Microsoft eine App registrieren (Schritte in der README) und die Client-ID hier einfügen. Weiterleitungs-URI: ") + redirectUri();
     var input = el.querySelector("[data-ab-client]");
     if (document.activeElement !== input) input.value = clientId();
+    var adv = el.querySelector("[data-ab-adv]");
+    if (!adv.dataset.init) { adv.dataset.init = "1"; adv.open = connected; }
     el.querySelector("[data-ab=od-connect]").hidden = connected;
     el.querySelector("[data-ab=od-disconnect]").hidden = !connected;
   }
@@ -548,7 +550,7 @@
         '<button type="button" class="' + btn + '" data-ab="folder" hidden></button>' +
         '<button type="button" class="' + btn + '" data-ab="folder-clear" hidden>Backup-Ordner entfernen</button>' +
       '</div>' +
-      '<p class="ab-sub">OneDrive (privat)</p>' +
+      '<details class="ab-adv" data-ab-adv><summary>Erweitert: direkt in OneDrive hochladen</summary>' +
       '<p class="ab-status" data-ab-od-status></p>' +
       '<div data-ab-od-setup>' +
         '<p class="ab-help" data-ab-od-help></p>' +
@@ -557,7 +559,8 @@
       '<div class="ab-actions">' +
         '<button type="button" class="' + primary + '" data-ab="od-connect">Mit OneDrive verbinden</button>' +
         '<button type="button" class="' + btn + '" data-ab="od-disconnect" hidden>OneDrive trennen</button>' +
-      '</div>';
+      '</div>' +
+      '</details>';
     el.addEventListener("click", function (e) {
       var target = e.target.closest("[data-ab]");
       if (target) panelAction(target.getAttribute("data-ab"));
